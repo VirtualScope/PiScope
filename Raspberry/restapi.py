@@ -22,18 +22,20 @@ app = Flask(__name__)
 api = Api(app)
 
 class DeviceComm(Resource):
-    def GET(self):
-        return {"":""}
     def post(self):
         req = request.json # Note 'dict' is a python dictionary object.
-        if type(req['setLightValue']) == bool:
-            lightRequest = req['setLightValue'] # keys() and values() to list info
+        if req['device'] == 'motor' and req['command'] == 'move' and type(req['value']) == int:
+            if req['value'] > 0:
+                moveMotor(true, req[value]) #True/False for direction, positive int for how far.
+            else:
+                moveMotor(false, abs(req['value'])
+        elif req['device'] == 'light' and req['command'] == 'switch' and type(req['value']) == boolean:
+            lightRequest = abs(req['setLightValue']) # keys() and values() to list info
             temporaryLightPowerTest(lightRequest)
-            print(request.json)
-        req = request.json # Note 'dict' is a python dictionary object.
-        if type(req['zoomDirection']) == bool and type(req['zoomHowMuch']) == int:
-            moveMotorFromWeb(req['zoomDirection'], req['zoomHowMuch'])
-            print(request.json)
+        elif req['device'] == 'light' and req['command'] == 'timer' and type(req['value']) == int:
+            lightRequest = abs(req['setLightValue']) # keys() and values() to list info
+            temporaryLightPowerTest(lightRequest)
+        print(request.json)
 
 api.add_resource(DeviceComm, '/api/devicecomm/')
 
