@@ -15,7 +15,8 @@ except:
     print("Error, some modules are missing! Exiting...") # Needed for IDLE error message
     sys.exit("Error, some modules are missing! Exiting...")
 from flask import Flask, request, jsonify
-from light import temporaryLightPowerTest, LightControls
+from motor import moveMotorFromWeb
+from light import lightOnNoTimerWeb, lightWithTimerWeb, temporaryLightPowerTest
 from flask_restful import Resource, Api
 
 
@@ -31,19 +32,22 @@ class Light(Resource):
     def post(self):
         req = request.json # Note 'dict' is a python dictionary object.
         if type(req['setLightValue']) == bool:
-            
+            #lightOnNoTimerWeb = req['setLightValue']
             lightRequest = req['setLightValue'] # keys() and values() to list info
             temporaryLightPowerTest(lightRequest)
+            print(request.json)
             return {"status":"success"} # Tell the web server not to display a Pi not responsive error.
         else:
             return ERROR_JSON #Hey, I see you hacker, don't try to put bad data here.
 class Motor(Resource):
     def get(self):
+        
         return {'Nothing to see':'here!'};
     def post(self):
         req = request.json # Note 'dict' is a python dictionary object.
         if type(req['zoomDirection']) == bool and type(req['zoomHowMuch']) == int:
-            
+            moveMotorFromWeb(req['zoomDirection'], req['zoomHowMuch'])
+            print(request.json)
             #Set motor state and return true if nothing broke here.
             
             return {"status":"success"} # Tell the web server not to display a Pi not responsive error.
