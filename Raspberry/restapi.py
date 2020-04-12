@@ -22,13 +22,13 @@ from flask_restful import Resource, Api
 
 app = Flask(__name__)
 api = Api(app)
-ERROR_JSON = {'status':'error', 'message':'invalid input'}
+#ERROR_JSON = {'status':'error', 'message':'invalid input'}
 
 
 class Light(Resource):
-    def get(self):
-        lightStatus = True#Replace with Light Status Here
-        return {'lightStatus':lightStatus};
+    #def get(self):
+        #lightStatus = True#Replace with Light Status Here
+        #return {'lightStatus':lightStatus};
     def post(self):
         req = request.json # Note 'dict' is a python dictionary object.
         if type(req['setLightValue']) == bool:
@@ -36,13 +36,13 @@ class Light(Resource):
             lightRequest = req['setLightValue'] # keys() and values() to list info
             temporaryLightPowerTest(lightRequest)
             print(request.json)
-            return {"status":"success"} # Tell the web server not to display a Pi not responsive error.
-        else:
-            return ERROR_JSON #Hey, I see you hacker, don't try to put bad data here.
+            #return {"status":"success"} # Tell the web server not to display a Pi not responsive error.
+        #else:
+            #return ERROR_JSON #Hey, I see you hacker, don't try to put bad data here.
 class Motor(Resource):
-    def get(self):
+    #def get(self):
         
-        return {'Nothing to see':'here!'};
+        #return {'Nothing to see':'here!'};
     def post(self):
         req = request.json # Note 'dict' is a python dictionary object.
         if type(req['zoomDirection']) == bool and type(req['zoomHowMuch']) == int:
@@ -50,9 +50,9 @@ class Motor(Resource):
             print(request.json)
             #Set motor state and return true if nothing broke here.
             
-            return {"status":"success"} # Tell the web server not to display a Pi not responsive error.
-        else:
-            return ERROR_JSON #Hey, I see you hacker, don't try to put bad data here.
+            #return {"status":"success"} # Tell the web server not to display a Pi not responsive error.
+        #else:
+            #return ERROR_JSON #Hey, I see you hacker, don't try to put bad data here.
 
 
 api.add_resource(Light, '/api/light/')
