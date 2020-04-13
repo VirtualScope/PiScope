@@ -78,6 +78,7 @@ class stepperControl(object):
     def __init__(self, stepCount, direction):
         self.stepCount = stepCount
         self.direction = direction
+        
     def move(x):
         if (not lock.acquire(blocking=False)):
             print("\n{} could not get the lock for the motor.".format(threading.current_thread().name))
@@ -193,8 +194,8 @@ class Light(Resource):
         if type(req['setLightValue']) == bool:
 
             #Start a new thread to test the light
-            lightRequest = req['setLightValue'] # keys() and values() to list info
-            lightThread = threading.Thread(target=LightControl.temporaryLightPowerTest(lightRequest), name='lightThread')
+            lightRequest = LightControls("", "", req['setLightValue']) # creates a new lightControls object
+            lightThread = threading.Thread(target=LightControls.noTimerSwitch(lightRequest), name='lightThread')
             lightThread.start()
 
             return {"status":"success"} # Tell the web server not to display a Pi not responsive error.
