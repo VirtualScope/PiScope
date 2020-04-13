@@ -10,6 +10,15 @@ from mysql.connector import Error
 import datetime
 import time                         #time used to set sleep between motor commands
 import RPi.GPIO as GPIO             #GPIO lib for Raspberry Pi (RPi3). Needed to use GPIO pins
+import threading                    #Threading for locks and spawning new threads
+
+#Pi Control Server Imports
+import json
+import requests
+from gevent.pywsgi import WSGIServer
+from flask import Flask, request, jsonify
+from light import temporaryLightPowerTest, LightControls
+from flask_restful import Resource, Api
 
 
 GPIO.setmode(GPIO.BOARD)            #Set to physical pin location # instead of names
@@ -18,8 +27,10 @@ GPIO.setwarnings(False)             #Just here to keep warnings quiet
 light = 21                          #Pin for hot wire on light. Groung at pin 20
 GPIO.setup(light, GPIO.OUT)         #Set 'light' pin to output
 
-
+#Light Control code
 class LightControls(object):
+    lock = threading.Lock()     #One lock for the whole LightControls class
+    
     def __init__(self, timer, time, isPowered):
         self.timer = timer
         self.time = time
@@ -60,11 +71,18 @@ class LightControls(object):
         # Turn light on/off for x minutes
         return True
 
+#Motor Code
 class stepperControl(object):
+    lock = threading.Lock()     #One lock for the whole stepperControl class
+    
     def __init__(self, stepCount, direction):
         self.stepCount = stepCount
         self.direction = direction
-    def move(x):    
+    def move(x):
+        if (not lock.acquire(blocking=False)):
+            print("\n{} could not get the lock for the motor.".format(threading.current_thread().name))
+            return               #Someone already has the lock. Leave
+        
         GPIO.setmode(GPIO.BOARD) #Set mode to read as physical pin layout instead of reference #s
         pins = [7,11,13,15]      #RPi3 physical #s for GPIO pins. Used for wiring motor to RPi3
         GPIO.setwarnings(False)
@@ -132,6 +150,8 @@ class stepperControl(object):
                             #command before next sent
                             time.sleep(0.001)
                             
+         lock.release()     #Remember to release the lock when finished!
+         
     def getMotorStatus():
         return int;
                             
@@ -148,10 +168,57 @@ class stepperControl(object):
             x = stepperControl(duration, direction)
             limit = move(x)
             return limit
-            
-class DeviceComm:
-    #TODO Kyle
+        
+#Start the control Server        
+class ControlServer:
+    def start():
+        app = Flask(__name__)
+        api = Api(app)
+        ERROR_JSON = {'status':'error', 'message':'invalid input'}
+        
+        api.add_resource(Light, '/api/light/')
+        api.add_resource(Motor, '/api/motor/')
+        
+        print("Starting Web Server") # More secure web server instead of directly using Flask.
+        http_server = WSGIServer(('0.0.0.0', 5000), app)
+        http_server.serve_forever()
+        
+#Control Server JSON Stuff
+class Light(Resource):
+    def get(self):
+        lightStatus = True#Replace with Light Status Here
+        return {'lightStatus':lightStatus};
+    def post(self):
+        req = request.json # Note 'dict' is a python dictionary object.
+        if type(req['setLightValue']) == bool:
 
+            #Start a new thread to test the light
+            lightRequest = req['setLightValue'] # keys() and values() to list info
+            lightThread = threading.Thread(target=LightControl.temporaryLightPowerTest(lightRequest), name='lightThread')
+            lightThread.start()
+
+            return {"status":"success"} # Tell the web server not to display a Pi not responsive error.
+        else:
+            return ERROR_JSON #Hey, I see you hacker, don't try to put bad data here.
+
+#Control Server JSON Stuff      
+class Motor(Resource):
+    def get(self):
+        return {'Nothing to see':'here!'};
+    def post(self):
+        req = request.json # Note 'dict' is a python dictionary object.
+        if type(req['zoomDirection']) == bool and type(req['zoomHowMuch']) == int:
+
+            #Start a new thread to move the motor
+            displacement = StepperControl(req['zoomDirection'], req['zoomHowMuch'])
+            motorThread = threading.Thread(target=StepperControl.move(displacement), name='motorThread')
+            motorThread.start()
+            
+            return {"status":"success"} # Tell the web server not to display a Pi not responsive error.
+        else:
+            return ERROR_JSON #Hey, I see you hacker, don't try to put bad data here.
+
+#Original pi code.
 class scope: 
     def __init__
         #Define the microscope name !!IMPORTANT it comes from terminal argument
@@ -198,6 +265,10 @@ class scope:
         #Picture folder where photos are saved on the Pi
         pic_folder = "/home/pi/MicroscopeImages/"
 
+        #NEW: Start Control Server
+        controlServer = threading.Thread(target=ControlSever.start(), name='controlServerMainThread')
+        controlServer.start()
+
         while True:
           #Run stream for designated time interval
           pro = subprocess.Popen(stream_command, stdout=subprocess.PIPE, shell=True, preexec_fn=os.setsid) 
@@ -217,7 +288,8 @@ class scope:
           #Send pic via ftp
           file = open(picture_path,"rb")                  # file to send
           ftp.storbinary("STOR " + picture_name, file)     # send the file
-          file.close()  
+          file.close()
+          
 scope_name = sys.argv[0]
 scope = scope(scope_name)
 
