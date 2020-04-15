@@ -66,7 +66,7 @@ class StepperControl(object):
             self.direction = False
             self.stepCount = abs(stepCount)
         else:
-            return
+            return 
         
     def move(self):
         if (not self.lock.acquire(blocking=False)):
@@ -173,6 +173,7 @@ class DeviceComm(Resource):
         http_server = WSGIServer(('0.0.0.0', 5000), app)
         http_server.serve_forever()
     def post(self):
+        print("Recieved a request.")
         req = request.json # Note 'dict' is a python dictionary object.
         if req['device'] == 'light' and req['command'] == 'switch' and type(req['value']) == bool:
             #Start a new thread to test the light
