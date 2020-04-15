@@ -5,8 +5,8 @@ import ftplib
 import signal
 from picamera import PiCamera
 from time import sleep
-import mysql.connector
-from mysql.connector import Error
+#import mysql.connector
+#from mysql.connector import Error
 import datetime
 import time                         #time used to set sleep between motor commands
 import RPi.GPIO as GPIO             #GPIO lib for Raspberry Pi (RPi3). Needed to use GPIO pins
@@ -17,19 +17,18 @@ import json
 import requests
 from gevent.pywsgi import WSGIServer
 from flask import Flask, request, jsonify
-from light import temporaryLightPowerTest, LightControls
 from flask_restful import Resource, Api
 
 
 GPIO.setmode(GPIO.BOARD)            #Set to physical pin location # instead of names
 GPIO.setwarnings(False)             #Just here to keep warnings quiet
 
-light = 21                          #Pin for hot wire on light. Groung at pin 20
+light = 21                          #Pin for hot wire on light. Ground at pin 20
 GPIO.setup(light, GPIO.OUT)         #Set 'light' pin to output
 
 #Light Control code
 class LightControls(object):
-    lock = threading.Lock()     #One lock for the whole LightControls class
+    lock = threading.RLock()     #One lock for the whole LightControls class
     
     def __init__(self, timer, time, isPowered):
         self.timer = timer
@@ -37,16 +36,11 @@ class LightControls(object):
         self.isPowered = isPowered
         
     def noTimerSwitch(x):
-        if x.isPowered == 'on':
+        if x.isPowered == True:
             GPIO.output(light, GPIO.HIGH)   #Set to high to turn on light
-        if x.isPowered == 'off':
+        if x.isPowered == False:
             GPIO.output(light, GPIO.LOW)    #Set to low (0v) to turn off light    
-            
-    def temporaryLightPowerTest(x): # Please delete this trash code of mine just making a POC
-        if x == True:
-            GPIO.output(light, GPIO.HIGH)   #Set to high to turn on light
-        if x == False:
-            GPIO.output(light, GPIO.LOW)    #Set to low (0v) to turn off light
+
 
     def timerOn(x):
         maxTime = 3.0                       #Maximum time requested by Cindy Harley
@@ -57,31 +51,25 @@ class LightControls(object):
         
         while time.time() <= timeout:       #Keep going until specified timeout
             time.sleep(0.0)                 #Does nothing.
-            
-        noTimerSwitch(x)                    #isPowered always equals off at this point            
-
-
-    def lightOnNoTimerWeb(newLightState):
-        # Turn light on/off
-        return True
-
-    def lightWithTimerWeb(newLightState, timeInMinutes):
-        # If variable is true, return false
-        # Turn variable to true
-        # Turn light on/off for x minutes
-        return True
+        GPIO.output(light, GPIO.LOW)                   #isPowered always equals off at this point            
 
 #Motor Code
-class stepperControl(object):
-    lock = threading.Lock()     #One lock for the whole stepperControl class
-    
-    def __init__(self, stepCount, direction):
+class StepperControl(object):
+    lock = threading.RLock()
+
+    def __init__(self, stepCount):
         self.stepCount = stepCount
-        self.direction = direction
+        if stepCount > 0:
+            self.direction = True
+        elif stepCount < 0:
+            self.direction = False
+            self.stepCount = abs(stepCount)
+        else:
+            return 
         
-    def move(x):
-        if (not lock.acquire(blocking=False)):
-            print("\n{} could not get the lock for the motor.".format(threading.current_thread().name))
+    def move(self):
+        if (not self.lock.acquire(blocking=False)):
+            print("{} could not get the lock for the motor.".format(threading.current_thread().name))
             return               #Someone already has the lock. Leave
         
         GPIO.setmode(GPIO.BOARD) #Set mode to read as physical pin layout instead of reference #s
@@ -110,9 +98,9 @@ class stepperControl(object):
         #Informs if limit switch has been hit
         limitFlag = False
         
-        if x.direction == True:
+        if self.direction == True:
             #Run loop for requested distance
-            for i in range(x.stepCount):
+            for i in range(self.stepCount):
                 #If limit switch is hit (GPIO.HIGH), stop motor
                 # REMOVE 'OR' TO FIT CIRCUMSTANCES WHEN LOW AND
                 # HIGH ESTABLISHED ON MICROSCOPE
@@ -132,8 +120,8 @@ class stepperControl(object):
                             time.sleep(0.001)
                                             
                         
-        if x.direction == False:            
-            for i in range(x.stepCount):
+        if self.direction == False:            
+            for i in range(self.stepCount):
                 #If limit switch is hit (GPIO.HIGH), stop motor
                 # REMOVE 'OR' TO FIT CIRCUMSTANCES WHEN LOW AND
                 # HIGH ESTABLISHED ON MICROSCOPE
@@ -151,77 +139,45 @@ class stepperControl(object):
                             #command before next sent
                             time.sleep(0.001)
                             
-         lock.release()     #Remember to release the lock when finished!
-         
-    def getMotorStatus():
-        return int;
-                            
-    def moveMotorFromWeb(direction, duration):# Direct=Bool, Duration=int
-        limit = False                        #Return value for success/failure of movement
-        if duration > 1024:
-            return limit 
-        if direction == True:                #True == up
-            x = stepperControl(duration, direction)
-            limit = move(x)                  #Alters default value if hits limit switch
-            return limit
-            
-        elif direction == False:                                #False == down
-            x = stepperControl(duration, direction)
-            limit = move(x)
-            return limit
+        self.lock.release()     #Remember to release the lock when finished!
         
 #Start the control Server        
-class ControlServer:
-    def start():
+class DeviceComm(Resource):
+    motorCalls = 0
+
+    def start(self):
         app = Flask(__name__)
         api = Api(app)
-        ERROR_JSON = {'status':'error', 'message':'invalid input'}
+        #ERROR_JSON = {'status':'error', 'message':'invalid input'}
         
-        api.add_resource(Light, '/api/light/')
-        api.add_resource(Motor, '/api/motor/')
+        api.add_resource(DeviceComm, '/api/device/')
         
         print("Starting Web Server") # More secure web server instead of directly using Flask.
+        
         http_server = WSGIServer(('0.0.0.0', 5000), app)
         http_server.serve_forever()
-        
-#Control Server JSON Stuff
-class Light(Resource):
-    def get(self):
-        lightStatus = True#Replace with Light Status Here
-        return {'lightStatus':lightStatus};
     def post(self):
+        print("Recieved a request.")
         req = request.json # Note 'dict' is a python dictionary object.
-        if type(req['setLightValue']) == bool:
-
+        if req['device'] == 'light' and req['command'] == 'switch' and type(req['value']) == bool:
             #Start a new thread to test the light
-            lightRequest = LightControls("", "", req['setLightValue']) # creates a new lightControls object
-            lightThread = threading.Thread(target=LightControls.noTimerSwitch(lightRequest), name='lightThread')
+            lightRequest = LightControls("", "", req['value']) # creates a new lightControls object
+            lightThread = threading.Thread(target=LightControls.noTimerSwitch, kwargs=dict(self=lightRequest), name='lightThread')
+            lightThread.start()
+        elif req['device'] == 'motor' and req['command'] == 'move' and type(req['value']) == int:
+            DeviceComm.motorCalls += 1
+            threadName = 'motorThread' + str(DeviceComm.motorCalls)
+            displacement = StepperControl(req['value'])
+            motorThread = threading.Thread(target=StepperControl.move, kwargs=dict(self=displacement), name=threadName)
+            motorThread.start()
+        elif req['device'] == 'light' and req['command'] == 'timer' and type(req['value']) == float:
+            lightRequest = LightControls(True, req['value'], True) # creates a new lightControls object
+            lightThread = threading.Thread(target=LightControls.timerOn, kwargs=dict(self=lightRequest), name='lightThread')
             lightThread.start()
 
-            return {"status":"success"} # Tell the web server not to display a Pi not responsive error.
-        else:
-            return ERROR_JSON #Hey, I see you hacker, don't try to put bad data here.
-
-#Control Server JSON Stuff      
-class Motor(Resource):
-    def get(self):
-        return {'Nothing to see':'here!'};
-    def post(self):
-        req = request.json # Note 'dict' is a python dictionary object.
-        if type(req['zoomDirection']) == bool and type(req['zoomHowMuch']) == int:
-
-            #Start a new thread to move the motor
-            displacement = StepperControl(req['zoomDirection'], req['zoomHowMuch'])
-            motorThread = threading.Thread(target=StepperControl.move(displacement), name='motorThread')
-            motorThread.start()
-            
-            return {"status":"success"} # Tell the web server not to display a Pi not responsive error.
-        else:
-            return ERROR_JSON #Hey, I see you hacker, don't try to put bad data here.
-
 #Original pi code.
-class scope: 
-    def __init__
+class scope(): 
+    def __init__():
         #Define the microscope name !!IMPORTANT it comes from terminal argument
         my_name = sys.argv[1]
 
@@ -267,8 +223,8 @@ class scope:
         pic_folder = "/home/pi/MicroscopeImages/"
 
         #NEW: Start Control Server
-        controlServer = threading.Thread(target=ControlSever.start(), name='controlServerMainThread')
-        controlServer.start()
+        DeviceComm = threading.Thread(target=DeviceComm.start(DeviceComm), name='DeviceCommMainThread')
+        DeviceComm.start()
 
         while True:
           #Run stream for designated time interval
@@ -291,6 +247,9 @@ class scope:
           ftp.storbinary("STOR " + picture_name, file)     # send the file
           file.close()
           
-scope_name = sys.argv[0]
-scope = scope(scope_name)
+#scope_name = sys.argv[0]
+#scope = scope(scope_name)
 
+#NEW: Start Control Server
+DeviceComm = threading.Thread(target=DeviceComm.start(DeviceComm), name='DeviceCommMainThread')
+DeviceComm.start()
