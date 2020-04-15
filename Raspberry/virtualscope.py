@@ -35,18 +35,18 @@ class LightControls(object):
         self.time = time
         self.isPowered = isPowered
         
-    def noTimerSwitch(x):
-        if x.isPowered == True:
+    def noTimerSwitch(self):
+        if self.isPowered == True:
             GPIO.output(light, GPIO.HIGH)   #Set to high to turn on light
-        if x.isPowered == False:
+        if self.isPowered == False:
             GPIO.output(light, GPIO.LOW)    #Set to low (0v) to turn off light    
 
 
-    def timerOn(x):
+    def timerOn(self):
         maxTime = 3.0                       #Maximum time requested by Cindy Harley
-        if x.time > maxTime:                #If user input time longer than maxTime...               
-            x.time = maxTime                #time switched to maxTime
-        timeout = time.time() + (60 * x.time)#Current time + specified timeout length
+        if self.time > maxTime:                #If user input time longer than maxTime...               
+            self.time = maxTime                #time switched to maxTime
+        timeout = time.time() + (60 * self.time)#Current time + specified timeout length
         GPIO.output(light, GPIO.HIGH)       #Set to high to turn on light    
         
         while time.time() <= timeout:       #Keep going until specified timeout
