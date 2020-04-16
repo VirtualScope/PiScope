@@ -107,6 +107,7 @@ class StepperControl(object):
                 if GPIO.input(highLimit)==GPIO.HIGH:
                     print("top limit switch hit")
                     limitFlag = True
+                    break
                 #If no limit switch is hit, run motor until destination is reached
                 else:
                     #For loop to go through each halfstep in halfStepSeq array
@@ -127,7 +128,8 @@ class StepperControl(object):
                 # HIGH ESTABLISHED ON MICROSCOPE
                 if GPIO.input(lowLimit)==GPIO.HIGH:
                     print("bottom limit switch hit")
-                    limitFlag = True 
+                    limitFlag = True
+                    break 
                 #If no limit switch is hit, run motor until destination is reached
                 else:
                     for step in range(len(revHalfStep)):
@@ -223,7 +225,7 @@ class scope():
         pic_folder = "/home/pi/MicroscopeImages/"
 
         #NEW: Start Control Server
-        DeviceComm = threading.Thread(target=DeviceComm.start(DeviceComm), name='DeviceCommMainThread')
+        DeviceComm = threading.Thread(target=DeviceComm.start, args=(DeviceComm), name='DeviceCommMainThread')
         DeviceComm.start()
 
         while True:
