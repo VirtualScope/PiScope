@@ -101,9 +101,7 @@ class StepperControl(object):
         if self.direction == True:
             #Run loop for requested distance
             for i in range(self.stepCount):
-                #If limit switch is hit (GPIO.HIGH), stop motor
-                # REMOVE 'OR' TO FIT CIRCUMSTANCES WHEN LOW AND
-                # HIGH ESTABLISHED ON MICROSCOPE
+
                 if GPIO.input(highLimit)==GPIO.HIGH:
                     print("top limit switch hit")
                     limitFlag = True
@@ -123,9 +121,7 @@ class StepperControl(object):
                         
         if self.direction == False:            
             for i in range(self.stepCount):
-                #If limit switch is hit (GPIO.HIGH), stop motor
-                # REMOVE 'OR' TO FIT CIRCUMSTANCES WHEN LOW AND
-                # HIGH ESTABLISHED ON MICROSCOPE
+
                 if GPIO.input(lowLimit)==GPIO.HIGH:
                     print("bottom limit switch hit")
                     limitFlag = True
