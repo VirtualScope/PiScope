@@ -75,7 +75,7 @@ class scope():
       print("Error while connecting to MySQL", e)
       time_increment = 3
       if (not('connection' in locals())):
-          sys.exit("Error while connecting to MySQL. Check virtualscope.ini Exiting...")
+          sys.exit("Error while connecting to MySQL. Check virtualscope.ini. Exiting...")
       
     #Close the database connection
     finally:
@@ -87,8 +87,12 @@ class scope():
     ftp = ftplib.FTP()
     host = ftpConfig['Hostname']
     port = int(ftpConfig['Port'])
-    ftp.connect(host, port)
-    ftp.login(ftpConfig['Username'], ftpConfig['Password'])
+    try:
+      ftp.connect(host, port)
+      ftp.login(ftpConfig['Username'], ftpConfig['Password'])
+    except Error as e:
+      print ("Error while connecting to FTP. Check virtualscope.ini.", e)
+      sys.exit("Error while connecting to FTP. Check virtualscope.ini. Exiting...")
     ftp.cwd(miscConfig['Working Images Path'])
 
     #The concatonated command for streaming
