@@ -9,14 +9,14 @@ import threading                    #Threading for locks and spawning new thread
 import importlib
 
 try:
-    print("Importing Modules")
+    print("Importing DeviceComm Modules")
     importlib.import_module('lightcontrols')
     importlib.import_module('steppercontrol')
     from lightcontrols import LightControls
     from steppercontrol import StepperControl
 except:
-    print("Error, some modules are missing! Exiting...") # Needed for IDLE error message
-    sys.exit("Error, some modules are missing! Exiting...")
+    print("Error, some modules are missing in devicecomm.py! Exiting...") # Needed for IDLE error message
+    sys.exit("Error, some modules are missing in devicecomm.py! Exiting...")
 
 
 #Start the control Server        

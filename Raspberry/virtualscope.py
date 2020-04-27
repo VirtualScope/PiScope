@@ -12,11 +12,11 @@ import datetime
 import configparser
 import importlib
 try:
-  print("Importing Modules")
+  print("Importing VirtualScope Modules")
   importlib.import_module('devicecomm')
   from devicecomm import DeviceComm
 except:
-  print("Error, some modules are missing! Exiting...") # Needed for IDLE error message
+  print("Error, some modules are missing in virtualscope.py! Exiting...") # Needed for IDLE error message
   sys.exit("Error, some modules are missing! Exiting...")
 
 
