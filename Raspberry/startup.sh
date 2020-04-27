@@ -7,6 +7,8 @@ if [ `whoami` != root ]; then
 fi
 
 #If python3 is not installed, install Python3
+data >> startup.log
+echo "Checking for Python 3..."
 if ! dpkg -s python3 >/dev/null 2>&1; then
     echo "Installing python3..."
     apt install python3 >> startup.log

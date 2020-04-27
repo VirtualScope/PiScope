@@ -36,13 +36,13 @@ class scope():
                             'Password': input("Enter the database password: ")}
 
       config['FTP'] = {'Hostname': input("Enter the FTP hostname: "),
-                            'Port': input("Enter the port: "),
+                            'Port': '21',
                             'Username': input("Enter the FTP username: "),
                             'Password': input("Enter the FTP password: ")}
 
-      config['Miscellaneous'] = {'Microscope Name': input("Enter the name of this microscope: ")}
-      config['Miscellaneous'] = {'Pictures Path': '/home/pi/MicroscopeImages/'}
-      config['Miscellaneous'] = {'Working Images Path': 'public_html/microscopes/' + config['Miscellaneous']['Microscope Name'] + '/images/'}
+      config['Miscellaneous'] = {'Microscope Name': input("Enter the name of this microscope: "),
+                                  'Pictures Path': '/home/pi/MicroscopeImages/'}
+      config['Miscellaneous']['Working Images Path'] = 'public_html/microscopes/' + config['Miscellaneous']['Microscope Name'] + '/images/'
 
       with open('virtualscope.ini', 'w') as configfile:
         config.write(configfile)
