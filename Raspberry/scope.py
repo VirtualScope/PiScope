@@ -10,9 +10,10 @@ from mysql.connector import Error
 import threading
 import datetime
 import configparser
-
+import importlib
 try:
   print("Importing Modules")
+  importlib.import_module('devicecomm')
   from devicecomm import DeviceComm
 except:
   print("Error, some modules are missing! Exiting...") # Needed for IDLE error message

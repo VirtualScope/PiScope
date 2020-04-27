@@ -10,6 +10,8 @@ import importlib
 
 try:
     print("Importing Modules")
+    importlib.import_module('lightcontrols')
+    importlib.import_module('steppercontrol')
     from lightcontrols import LightControls
     from steppercontrol import StepperControl
 except:
