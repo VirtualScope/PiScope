@@ -32,7 +32,7 @@ class DeviceComm(Resource):
         
         print("Starting Web Server") # More secure web server instead of directly using Flask.
         
-        http_server = WSGIServer(('0.0.0.0', 5000), app)
+        http_server = WSGIServer(('0.0.0.0', 80), app)
         http_server.serve_forever()
     def post(self):
         print("Recieved a request.")
